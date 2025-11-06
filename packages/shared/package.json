@@ -1,0 +1,23 @@
+{
+  "name": "@deltascan/shared",
+  "version": "1.0.0",
+  "description": "Shared types, utilities, and constants for DeltaScan",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "jest"
+  },
+  "keywords": ["prediction-markets", "arbitrage", "types"],
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
