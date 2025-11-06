@@ -4,6 +4,8 @@
 
 DeltaScan is a prediction market arbitrage platform that scans multiple prediction market platforms to identify and display profitable arbitrage opportunities. The system continuously monitors different markets, compares prices across platforms, and calculates potential profit margins.
 
+**Current Status**: ✅ **Phase 1 Complete** - Polymarket integration is fully functional with real-time market data, rate limiting, caching, and arbitrage detection.
+
 ## Architecture
 
 ### Monorepo Structure
@@ -71,10 +73,13 @@ DeltaScan/
 
 **Endpoints**:
 - `GET /api/markets` - List all markets with pagination
+- `GET /api/markets/trending?limit=N` - Get trending markets by volume
+- `GET /api/markets/active?limit=N` - Get active markets with minimum criteria
 - `GET /api/markets/:marketId/bets` - Get bets for a specific market
 - `GET /api/arbitrage` - Get all arbitrage opportunities
 - `POST /api/scan` - Trigger manual scan
-- `GET /api/health` - Health check
+- `GET /api/health` - General health check
+- `GET /api/health/polymarket` - Polymarket service health and rate limiter status
 
 ### 3. WebSocket Events (`packages/server/src/index.ts`)
 
@@ -96,7 +101,106 @@ DeltaScan/
 - Displays individual arbitrage opportunity
 - Shows profit margin, platforms, prices, and capital requirements
 
-### 5. Shared Types (`packages/shared/src/types/`)
+### 5. Polymarket Integration (✅ Completed)
+
+#### Architecture Overview
+
+The Polymarket integration follows a 5-layer architecture:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Layer 5: Service (Business Logic)                       │
+│  PolymarketService.ts                                    │
+│  - getTrendingMarkets(), getActiveMarkets()              │
+│  - Caching (5-min TTL), filtering, aggregation           │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+┌──────────────────────────────────────────────────────────┐
+│  Layer 4: Transformer (Data Transformation)              │
+│  PolymarketTransformer.ts                                │
+│  - Parse API responses, extract YES/NO prices            │
+│  - Transform to internal Market/Bet types                │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+┌──────────────────────────────────────────────────────────┐
+│  Layer 3: Rate Limiter (Queue Management)                │
+│  RateLimiter.ts                                          │
+│  - Queue-based limiting (100 req/min)                    │
+│  - Automatic waiting, timestamp tracking                 │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+┌──────────────────────────────────────────────────────────┐
+│  Layer 2: API Client (HTTP Communication)                │
+│  PolymarketAPIClient.ts                                  │
+│  - Gamma API (metadata), CLOB API (pricing)              │
+│  - Request/response interceptors, error handling         │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+┌──────────────────────────────────────────────────────────┐
+│  Layer 1: Types (Data Models)                            │
+│  packages/shared/src/types/polymarket.ts                 │
+│  - PolymarketMarket, PolymarketEvent, CLOBOrderBook      │
+│  - Zod schemas for validation                            │
+└──────────────────────────────────────────────────────────┘
+```
+
+#### Key Components
+
+**PolymarketAPIClient** (`packages/server/src/services/polymarket/PolymarketAPIClient.ts`):
+- Axios-based HTTP client for Gamma and CLOB APIs
+- Methods: `getMarkets()`, `getEvents()`, `getOrderBook()`, `getPrice()`
+- Request/response logging and error handling
+- Base URLs: `https://gamma-api.polymarket.com`, `https://clob.polymarket.com`
+
+**RateLimiter** (`packages/server/src/services/polymarket/RateLimiter.ts`):
+- Queue-based rate limiting (100 requests/minute)
+- Tracks timestamps in 1-minute sliding window
+- Automatic waiting when approaching limits
+- Status monitoring via `getStatus()`
+
+**PolymarketTransformer** (`packages/server/src/services/polymarket/PolymarketTransformer.ts`):
+- Parses stringified JSON fields (`outcomePrices`, `clobTokenIds`)
+- Extracts YES/NO prices from multiple data formats
+- Transforms `PolymarketMarket` → internal `Market` type
+- Transforms `PolymarketMarket` → `Bet[]` array
+- Validates markets for arbitrage suitability
+
+**PolymarketService** (`packages/server/src/services/polymarket/PolymarketService.ts`):
+- High-level business logic layer
+- Methods:
+  - `getTrendingMarkets(limit)` - Fetch by volume
+  - `getActiveMarkets(limit)` - Filter by min criteria
+  - `getMarketsByCategory(tags, limit)` - Filter by tags
+  - `getMarketsWithBets(limit)` - Fetch with pricing data
+  - `getMarketWithBets(marketId)` - Get specific market
+  - `healthCheck()` - Service health status
+- In-memory caching with configurable TTL (default: 5 minutes)
+- Minimum criteria filtering (liquidity >= $1000, volume24hr >= $500)
+
+**Integration with Scanner**:
+- `MarketScannerService` initializes `PolymarketService`
+- `scanPolymarket()` fetches markets and bets
+- Stores data in memory for arbitrage detection
+- Exposes service via `getPolymarketService()` for direct access
+
+#### API Endpoints Added
+
+- `GET /api/markets/trending?limit=N` - Trending markets by volume
+- `GET /api/markets/active?limit=N` - Active markets with minimum criteria
+- `GET /api/health/polymarket` - Service health + rate limiter status
+
+#### Configuration
+
+**No API keys required** - Polymarket Gamma API is publicly accessible.
+
+Configuration in code:
+- Rate limit: 100 requests/minute
+- Cache TTL: 5 minutes (300 seconds)
+- Min liquidity: $1,000
+- Min 24hr volume: $500
+- Default fetch limit: 100 markets
+
+### 6. Shared Types (`packages/shared/src/types/`)
 
 **Core Types**:
 - `Market`: Prediction market metadata
