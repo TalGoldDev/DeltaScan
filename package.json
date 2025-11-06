@@ -1,0 +1,32 @@
+{
+  "name": "deltascan",
+  "version": "1.0.0",
+  "description": "Prediction market arbitrage platform - scans multiple markets for betting opportunities",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=@deltascan/server",
+    "dev:client": "npm run dev --workspace=@deltascan/client",
+    "build": "npm run build --workspaces",
+    "build:server": "npm run build --workspace=@deltascan/server",
+    "build:client": "npm run build --workspace=@deltascan/client",
+    "start": "npm run start --workspace=@deltascan/server",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "type-check": "npm run type-check --workspaces",
+    "clean": "rimraf packages/*/dist packages/*/node_modules node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
