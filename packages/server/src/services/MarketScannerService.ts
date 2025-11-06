@@ -7,6 +7,7 @@ import {
   BetOutcome,
 } from '@deltascan/shared';
 import { calculateArbitrage, calculateExpectedProfit } from '@deltascan/shared';
+import { PolymarketService } from './polymarket/PolymarketService';
 
 /**
  * Service responsible for scanning multiple prediction market platforms
@@ -17,7 +18,13 @@ export class MarketScannerService {
   private bets: Map<string, Bet[]> = new Map();
   private arbitrageOpportunities: ArbitrageOpportunity[] = [];
 
+  // Platform services
+  private polymarketService: PolymarketService;
+
   constructor() {
+    // Initialize platform services
+    this.polymarketService = new PolymarketService();
+
     logger.info('MarketScannerService initialized');
   }
 
@@ -56,8 +63,30 @@ export class MarketScannerService {
    * Scan Polymarket for markets and bets
    */
   private async scanPolymarket(): Promise<void> {
-    logger.debug('Scanning Polymarket');
-    // TODO: Implement Polymarket API integration
+    try {
+      logger.info('Scanning Polymarket...');
+
+      // Fetch markets with bets from Polymarket
+      const { markets, bets } = await this.polymarketService.getMarketsWithBets(100);
+
+      // Store markets
+      markets.forEach((market) => {
+        this.markets.set(market.id, market);
+      });
+
+      // Store bets
+      bets.forEach((betArray, marketId) => {
+        this.bets.set(marketId, betArray);
+      });
+
+      logger.info('Polymarket scan completed', {
+        markets: markets.length,
+        bets: bets.size,
+      });
+    } catch (error) {
+      logger.error('Error scanning Polymarket', { error });
+      // Don't throw - allow other platforms to continue
+    }
   }
 
   /**
@@ -147,5 +176,12 @@ export class MarketScannerService {
    */
   getBetsForMarket(marketId: string): Bet[] {
     return this.bets.get(marketId) || [];
+  }
+
+  /**
+   * Get Polymarket service instance for direct access
+   */
+  getPolymarketService(): PolymarketService {
+    return this.polymarketService;
   }
 }
