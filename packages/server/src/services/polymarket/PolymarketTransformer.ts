@@ -5,9 +5,8 @@ import type {
   Market,
   Bet,
   MarketPlatform,
-  BetOutcome,
-  MarketStatus,
 } from '@deltascan/shared';
+import { BetOutcome, MarketStatus } from '@deltascan/shared';
 
 /**
  * Transformer for converting Polymarket data to internal types
@@ -41,10 +40,10 @@ export class PolymarketTransformer {
       // Try to get prices from tokens array first (most reliable)
       if (market.tokens && market.tokens.length >= 2) {
         const yesToken = market.tokens.find(
-          (t) => t.outcome.toLowerCase() === 'yes'
+          (t: any) => t.outcome.toLowerCase() === 'yes'
         );
         const noToken = market.tokens.find(
-          (t) => t.outcome.toLowerCase() === 'no'
+          (t: any) => t.outcome.toLowerCase() === 'no'
         );
 
         if (yesToken && noToken && yesToken.price !== undefined && noToken.price !== undefined) {

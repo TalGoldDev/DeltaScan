@@ -24,11 +24,13 @@
     "railway:status": "railway status"
   },
   "devDependencies": {
-    "@railway/cli": "^4.11.0",
     "@types/node": "^20.10.0",
     "concurrently": "^8.2.2",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3"
+  },
+  "optionalDependencies": {
+    "@railway/cli": "^4.11.0"
   },
   "engines": {
     "node": ">=18.0.0",
