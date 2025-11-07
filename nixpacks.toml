@@ -2,15 +2,17 @@
 # This ensures proper build order for the workspace packages
 
 [phases.setup]
-nixPkgs = ["nodejs-18_x", "npm-9_x"]
+nixPkgs = ["nodejs-18_x"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = [
+  "npm ci --production=false || npm install"
+]
 
 [phases.build]
 cmds = [
-  "npm run build --workspace=@deltascan/shared",
-  "npm run build --workspace=@deltascan/server"
+  "cd packages/shared && npm run build && cd ../..",
+  "cd packages/server && npm run build && cd ../.."
 ]
 
 [start]
