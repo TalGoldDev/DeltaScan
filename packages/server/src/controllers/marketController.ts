@@ -67,5 +67,75 @@ export const triggerScan = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Get trending markets from Polymarket
+ */
+export const getTrendingMarkets = asyncHandler(
+  async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const polymarketService = scannerService.getPolymarketService();
+    const markets = await polymarketService.getTrendingMarkets(limit);
+
+    res.json({
+      success: true,
+      data: {
+        items: markets,
+        pagination: {
+          page: 1,
+          pageSize: markets.length,
+          totalPages: 1,
+          totalItems: markets.length,
+        },
+      },
+      timestamp: new Date(),
+    });
+  }
+);
+
+/**
+ * Get active markets from Polymarket
+ */
+export const getActiveMarkets = asyncHandler(
+  async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const polymarketService = scannerService.getPolymarketService();
+    const markets = await polymarketService.getActiveMarkets(limit);
+
+    res.json({
+      success: true,
+      data: {
+        items: markets,
+        pagination: {
+          page: 1,
+          pageSize: markets.length,
+          totalPages: 1,
+          totalItems: markets.length,
+        },
+      },
+      timestamp: new Date(),
+    });
+  }
+);
+
+/**
+ * Get Polymarket service health status
+ */
+export const getPolymarketHealth = asyncHandler(
+  async (req: Request, res: Response) => {
+    const polymarketService = scannerService.getPolymarketService();
+    const isHealthy = await polymarketService.healthCheck();
+    const rateLimiterStatus = polymarketService.getRateLimiterStatus();
+
+    res.json({
+      success: true,
+      data: {
+        healthy: isHealthy,
+        rateLimiter: rateLimiterStatus,
+      },
+      timestamp: new Date(),
+    });
+  }
+);
+
 // Export the scanner service instance for use in scheduled tasks
 export { scannerService };

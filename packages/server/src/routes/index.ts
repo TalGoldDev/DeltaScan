@@ -6,6 +6,8 @@ const router = Router();
 // Market routes
 router.get('/markets', marketController.getMarkets);
 router.get('/markets/:marketId/bets', marketController.getBets);
+router.get('/markets/trending', marketController.getTrendingMarkets);
+router.get('/markets/active', marketController.getActiveMarkets);
 
 // Arbitrage routes
 router.get('/arbitrage', marketController.getArbitrageOpportunities);
@@ -13,7 +15,7 @@ router.get('/arbitrage', marketController.getArbitrageOpportunities);
 // Scan routes
 router.post('/scan', marketController.triggerScan);
 
-// Health check
+// Health check routes
 router.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -21,5 +23,6 @@ router.get('/health', (req, res) => {
     timestamp: new Date(),
   });
 });
+router.get('/health/polymarket', marketController.getPolymarketHealth);
 
 export default router;
