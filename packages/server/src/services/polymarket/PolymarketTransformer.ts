@@ -1,6 +1,7 @@
 import { logger } from '../../utils/logger';
 import type {
   PolymarketMarket,
+  PolymarketToken,
   ParsedMarketPrices,
   Market,
   Bet,
@@ -40,10 +41,10 @@ export class PolymarketTransformer {
       // Try to get prices from tokens array first (most reliable)
       if (market.tokens && market.tokens.length >= 2) {
         const yesToken = market.tokens.find(
-          (t: any) => t.outcome.toLowerCase() === 'yes'
+          (t: PolymarketToken) => t.outcome.toLowerCase() === 'yes'
         );
         const noToken = market.tokens.find(
-          (t: any) => t.outcome.toLowerCase() === 'no'
+          (t: PolymarketToken) => t.outcome.toLowerCase() === 'no'
         );
 
         if (yesToken && noToken && yesToken.price !== undefined && noToken.price !== undefined) {

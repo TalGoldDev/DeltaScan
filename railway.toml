@@ -3,7 +3,7 @@
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npm run build --workspace=@deltascan/shared && npm run build:server"
+buildCommand = "npm install && npm run build:server"
 
 [deploy]
 startCommand = "npm run start"
