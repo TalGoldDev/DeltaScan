@@ -46,9 +46,9 @@ This guide walks you through deploying DeltaScan to Railway.app, a modern platfo
 1. **Install Railway CLI**
    ```bash
    npm install -g @railway/cli
-   # or
-   npm run railway:install  # This is already in package.json
    ```
+
+   Note: The Railway CLI is included as an optional dependency in `package.json`. If installation fails due to network issues, you can still deploy via the Railway dashboard.
 
 2. **Login to Railway**
    ```bash
@@ -86,7 +86,7 @@ This guide walks you through deploying DeltaScan to Railway.app, a modern platfo
 
 ### `railway.toml`
 Main Railway configuration file that specifies:
-- Build command: `npm install && npm run build:server`
+- Build command: `npm install && npm run build --workspace=@deltascan/shared && npm run build:server`
 - Start command: `npm run start`
 - Health check endpoint: `/api/health`
 - Restart policy: Restart on failure, max 10 retries
@@ -101,14 +101,16 @@ Specifies the web process: `web: npm run start`
 
 DeltaScan uses a monorepo structure with workspaces. Railway is configured to:
 1. Install all workspace dependencies
-2. Build only the server package
-3. Start the server package
+2. Build the shared package (required dependency)
+3. Build the server package
+4. Start the server package
 
 The build process:
 ```bash
-npm install          # Installs all workspace dependencies
-npm run build:server # Builds @deltascan/server package
-npm run start        # Starts the server from dist/index.js
+npm install                                      # Installs all workspace dependencies
+npm run build --workspace=@deltascan/shared     # Builds shared package (types, utils)
+npm run build:server                            # Builds @deltascan/server package
+npm run start                                   # Starts the server from dist/index.js
 ```
 
 ## Health Checks
