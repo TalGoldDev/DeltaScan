@@ -11,7 +11,7 @@
     "dev:server": "npm run dev --workspace=@deltascan/server",
     "dev:client": "npm run dev --workspace=@deltascan/client",
     "build": "npm run build --workspaces",
-    "build:server": "npm run build --workspace=@deltascan/server",
+    "build:server": "npm run build --workspace=@deltascan/shared && npm run build --workspace=@deltascan/server",
     "build:client": "npm run build --workspace=@deltascan/client",
     "start": "npm run start --workspace=@deltascan/server",
     "test": "npm run test --workspaces",

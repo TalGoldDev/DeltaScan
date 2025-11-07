@@ -1,0 +1,17 @@
+# Nixpacks configuration for DeltaScan monorepo
+# This ensures proper build order for the workspace packages
+
+[phases.setup]
+nixPkgs = ["nodejs-18_x", "npm-9_x"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = [
+  "npm run build --workspace=@deltascan/shared",
+  "npm run build --workspace=@deltascan/server"
+]
+
+[start]
+cmd = "npm run start"
