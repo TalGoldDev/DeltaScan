@@ -289,7 +289,37 @@ npm run test             # Run tests
 # Utilities
 npm run clean            # Remove build artifacts and node_modules
 npm run start            # Start production server
+
+# Railway Deployment
+npm run railway:link     # Link to Railway project
+npm run railway:deploy   # Deploy to Railway
+npm run railway:logs     # View deployment logs
+npm run railway:status   # Check service status
 ```
+
+## Deployment
+
+### Railway Deployment
+
+DeltaScan is configured for easy deployment to Railway.app. See **[Railway Deployment Guide](docs/RAILWAY_DEPLOYMENT.md)** for detailed instructions.
+
+Quick deploy:
+1. Create a new Railway project from your GitHub repository
+2. Set environment variables (see `.env.example`)
+3. Deploy automatically with Railway's CI/CD
+
+Railway will automatically:
+- Install dependencies
+- Build the server package
+- Start the application
+- Monitor health via `/api/health`
+- Provide a public URL
+
+Configuration files included:
+- `railway.toml` - Railway deployment configuration
+- `railway.json` - Alternative JSON configuration
+- `Procfile` - Process configuration
+- `.env.example` - Environment variables template
 
 ## Polymarket Integration
 
