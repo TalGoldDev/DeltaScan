@@ -1,0 +1,35 @@
+# Label PRs based on the packages they modify
+
+'package: shared':
+  - changed-files:
+    - any-glob-to-any-file: 'packages/shared/**/*'
+
+'package: server':
+  - changed-files:
+    - any-glob-to-any-file: 'packages/server/**/*'
+
+'package: client':
+  - changed-files:
+    - any-glob-to-any-file: 'packages/client/**/*'
+
+'dependencies':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'packages/*/package.json'
+
+'documentation':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.md'
+      - 'docs/**/*'
+
+'ci/cd':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**/*'
+      - 'railway.json'
+      - 'railway.toml'
+      - 'nixpacks.toml'
+      - 'Procfile'
