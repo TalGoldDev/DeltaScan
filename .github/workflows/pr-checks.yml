@@ -1,0 +1,93 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for better diff analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for changed packages
+        id: changed-packages
+        run: |
+          # Determine which packages have changed
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files: $CHANGED_FILES"
+
+          if echo "$CHANGED_FILES" | grep -q "packages/shared/"; then
+            echo "shared=true" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "packages/server/"; then
+            echo "server=true" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "packages/client/"; then
+            echo "client=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build shared package
+        run: npm run build --workspace=@deltascan/shared
+
+      - name: Type check all workspaces
+        run: npm run type-check
+
+      - name: Lint all workspaces
+        run: npm run lint
+
+      - name: Test all workspaces
+        run: npm run test
+
+      - name: Build all workspaces
+        run: npm run build
+
+      - name: Check build output size
+        run: |
+          echo "### Build Output Sizes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "packages/server/dist" ]; then
+            SERVER_SIZE=$(du -sh packages/server/dist | cut -f1)
+            echo "- **Server:** $SERVER_SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -d "packages/client/dist" ]; then
+            CLIENT_SIZE=$(du -sh packages/client/dist | cut -f1)
+            echo "- **Client:** $CLIENT_SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -d "packages/shared/dist" ]; then
+            SHARED_SIZE=$(du -sh packages/shared/dist | cut -f1)
+            echo "- **Shared:** $SHARED_SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate

@@ -1,0 +1,139 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/server/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy Server to Render
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type checking
+        run: npm run type-check --workspace=@deltascan/server
+
+      - name: Run linting
+        run: npm run lint --workspace=@deltascan/server
+
+      - name: Run tests
+        run: npm run test --workspace=@deltascan/server
+
+      - name: Build shared package
+        run: npm run build --workspace=@deltascan/shared
+
+      - name: Build server
+        run: npm run build --workspace=@deltascan/server
+
+      - name: Trigger Render Deployment
+        id: render-deploy
+        run: |
+          echo "Triggering Render deployment..."
+
+          RESPONSE=$(curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": false}' \
+            -w "\n%{http_code}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n-1)
+
+          echo "Response code: $HTTP_CODE"
+          echo "Response body: $BODY"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            DEPLOY_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "deploy_id=$DEPLOY_ID" >> $GITHUB_OUTPUT
+            echo "### ✅ Render Deployment Triggered" >> $GITHUB_STEP_SUMMARY
+            echo "**Deploy ID:** $DEPLOY_ID" >> $GITHUB_STEP_SUMMARY
+            echo "**Service ID:** ${{ secrets.RENDER_SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "### ❌ Render Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "**HTTP Code:** $HTTP_CODE" >> $GITHUB_STEP_SUMMARY
+            echo "**Response:** $BODY" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Wait for deployment to start
+        if: success()
+        run: |
+          echo "Waiting for deployment to be processed..."
+          sleep 10
+
+      - name: Check deployment status
+        if: success()
+        run: |
+          DEPLOY_ID="${{ steps.render-deploy.outputs.deploy_id }}"
+
+          if [ -z "$DEPLOY_ID" ]; then
+            echo "No deploy ID found, skipping status check"
+            exit 0
+          fi
+
+          echo "Checking deployment status for: $DEPLOY_ID"
+
+          # Check status up to 5 times (50 seconds)
+          for i in {1..5}; do
+            RESPONSE=$(curl -s "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys/$DEPLOY_ID" \
+              -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}")
+
+            STATUS=$(echo "$RESPONSE" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+            echo "Attempt $i: Status = $STATUS"
+
+            if [ "$STATUS" = "live" ]; then
+              echo "### 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+              echo "The server is now live on Render." >> $GITHUB_STEP_SUMMARY
+              exit 0
+            elif [ "$STATUS" = "build_failed" ] || [ "$STATUS" = "failed" ]; then
+              echo "### ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+              echo "**Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          echo "### ⏳ Deployment In Progress" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment is still building. Check Render dashboard for live status." >> $GITHUB_STEP_SUMMARY
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "### Deployment Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service ID:** ${{ secrets.RENDER_SERVICE_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy ID:** ${{ steps.render-deploy.outputs.deploy_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

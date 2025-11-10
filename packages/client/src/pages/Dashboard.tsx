@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useArbitrage } from '../hooks/useArbitrage';
 import { ArbitrageCard } from '../components/ArbitrageCard';
 import { wsService } from '../services/websocket';
+import type { ArbitrageOpportunity } from '@deltascan/shared';
 
 export const Dashboard: React.FC = () => {
   const { opportunities, isLoading, error, refetch } = useArbitrage();
@@ -22,7 +23,7 @@ export const Dashboard: React.FC = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-xl text-red-600">Error: {error}</div>
+        <div className="text-xl text-red-600">Error: {error.message}</div>
       </div>
     );
   }
@@ -69,7 +70,7 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {opportunities.map((opportunity) => (
+            {opportunities.map((opportunity: ArbitrageOpportunity) => (
               <ArbitrageCard key={opportunity.id} opportunity={opportunity} />
             ))}
           </div>

@@ -1,0 +1,100 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/client/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'packages/client/**'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  deploy:
+    name: Deploy Client to Vercel
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          else
+            vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@deltascan/shared
+
+      - name: Build client
+        run: npm run build --workspace=@deltascan/client
+        env:
+          # Add any client environment variables here
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy to Vercel (Production)
+        id: deploy-production
+        if: github.event_name == 'push'
+        run: |
+          URL=$(vercel deploy ./packages/client/dist --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "### 🚀 Deployed to Production" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** $URL" >> $GITHUB_STEP_SUMMARY
+
+      - name: Deploy to Vercel (Preview)
+        id: deploy-preview
+        if: github.event_name == 'pull_request'
+        run: |
+          URL=$(vercel deploy ./packages/client/dist --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "### 🔍 Preview Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** $URL" >> $GITHUB_STEP_SUMMARY
+
+      - name: Set deployment output
+        id: deploy
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "url=${{ steps.deploy-production.outputs.url }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=${{ steps.deploy-preview.outputs.url }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment PR with deployment URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy-preview.outputs.url }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### 🚀 Preview Deployment Ready!\n\n**URL:** ${url}\n\nThe client has been deployed to Vercel for preview.`
+            });
