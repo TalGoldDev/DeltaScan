@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build shared package
+        run: npm run build --workspace=@deltascan/shared
+
       - name: Run type checking
         run: npm run type-check
 
@@ -50,6 +53,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=@deltascan/shared
 
       - name: Run tests
         run: npm run test

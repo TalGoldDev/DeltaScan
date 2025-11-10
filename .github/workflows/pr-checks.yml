@@ -43,6 +43,9 @@ jobs:
             echo "client=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Build shared package
+        run: npm run build --workspace=@deltascan/shared
+
       - name: Type check all workspaces
         run: npm run type-check
 
